@@ -51,9 +51,9 @@ def clear_calculator_memory():
     # return
 def perform_arithmetic():
     if math == "addition":
-            calculator_entry_number = int(f_num) + int(calculator_entry.get())
-            calculator_entry.delete(0, END)
-            calculator_entry.insert(0, str(calculator_entry_number))
+         calculator_entry_number = int(f_num) + int(calculator_entry.get())
+         calculator_entry.delete(0, END)
+         calculator_entry.insert(0, str(calculator_entry_number))
     elif math == "subtraction":
         calculator_entry_number = int(f_num) - int(calculator_entry.get())
         calculator_entry.delete(0, END)
