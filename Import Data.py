@@ -2,7 +2,7 @@
 toolpathdata = []
 executed_distance_traveled = []
 tool = []
-executed_distance_traveled_for_existing_tool_calc = []
+executed_distance_traveled_for_new_tool_calc = []
 
 # increment through each line of the data and concatonate all required data into toolpathdata.
 with open('Test Data') as main:
@@ -53,7 +53,7 @@ for x, value in enumerate(toolpathdata):
                 executed_distance_traveled[existing_tool_index_number + 1] += arc_length
     elif value[0] not in executed_distance_traveled:
         executed_distance_traveled_for_new_tool_calc = [value[0], 0.0]
-        if x >=2:
+        if x >= 2:
             if "Segment" in value[0]:
                 x1 = float(value[1])
                 y1 = float(value[2])
