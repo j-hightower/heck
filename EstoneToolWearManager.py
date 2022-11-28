@@ -2,6 +2,54 @@ from tkinter import *
 from PIL import ImageTk,Image
 from tkinter import messagebox
 from tkinter import filedialog
+import json
+
+"""
+Imports the important function from the ImportData script, so that we can call those functions in the 'perform_executed_distance_traveled_calculation' function.
+"""
+from ImportData import datacleaning
+
+"""
+To make this program not crash if it's opened on a computer for the first time, these lines of code generate the ToolDistanceDB.json file, if it doesn't exist. If it does exist,
+it simply closes it right after opening. This way we won't have to import the dictionary of lifetime_distance_traveled anywhere else than right here. It also initializes the
+dictionary lifetime_distance_traveled so that the program doesn't error out when it is called in the lifetime_distance_traveled_filehandling_and_calculation function.
+"""
+def boot():
+    try:
+        database_file_object = open('ToolDistanceDB.json')
+        database_file_object.close()
+    except:
+        database_file_object = open('ToolDistanceDB.json', 'w')
+        database_file_object.write('''
+{
+  "ideal_distance_traveled": {
+    "E001": 10000.0,
+    "E002": 10000.0,
+    "E003": 10000.0,
+    "E004": 10000.0,
+    "E005": 10000.0,
+    "E006": 10000.0,
+    "E007": 10000.0,
+    "E008": 10000.0,
+    "E009": 10000.0,
+    "E010": 10000.0,
+    "E011": 10000.0,
+    "E012": 10000.0,
+    "E013": 10000.0,
+    "E014": 10000.0,
+    "E015": 10000.0,
+    "E016": 10000.0,
+    "E017": 10000.0,
+    "E018": 10000.0,
+    "E019": 10000.0
+  },
+  "lifetime_distance_traveled": {},
+  "tool_wear": {}
+}
+        ''')
+        database_file_object.close()
+
+boot()
 
 """
 Because we have raw_data_filepath set to a global variable in the 'open_raw_data_file' function, we initialize it here as a string so that other files can call it once it's
@@ -10,25 +58,82 @@ mutilated in the 'open_raw_data_file' function.
 raw_data_filepath = str()
 
 """
-Imports the important functions from the ImportData script, so that we can call those functions in the 'perform_executed_distance_traveled_calculation' function.
+Defines a function that can be called to create the combined dictionaries from ToolDistanceDB.json without passing any arguments into or out of the function.
 """
-from ImportData import datacleaning, distance_calculation
+def create_combined_dictionaries():
+    with open('ToolDistanceDB.json') as json_file_object:
+        combined_dictionaries = json.load(json_file_object)
+    return combined_dictionaries
 
 """
-Defines the function for calculating the executed_distance_traveled based on a program executed on the m600f.
+Defines the function to handle updating the database anytime a function alters one of the three dictionaries in the ToolDistanceDB.json database.
 """
-def perform_executed_distance_traveled_calculation(raw_data_filepath):
-    try:
-        open(raw_data_filepath)
-        clean_data = datacleaning(raw_data_filepath)
-        distance = distance_calculation(clean_data)
-        print(distance)
-    except Exception as e:
-        messagebox.showerror('Calculate Executed Distance Traveled', 'Invalid or no file selected to use for calculation!')
-        print(e)
+def update_database(dictionary, update_type):
+    combined_dictionaries = create_combined_dictionaries()
+    if update_type == 'lifetime':
+        lifetime_distance_traveled = combined_dictionaries.get('lifetime_distance_traveled')
+        lifetime_distance_traveled.update(dictionary)
+        ideal_distance_traveled = combined_dictionaries.get('ideal_distance_traveled')
+        tool_wear_dictionary = combined_dictionaries.get('tool_wear')
+        combined_dictionaries = {'lifetime_distance_traveled': lifetime_distance_traveled, 'ideal_distance_traveled': ideal_distance_traveled, 'tool_wear': tool_wear_dictionary}
+        with open('ToolDistanceDB.json', 'w') as json_file_object:
+            json.dump(combined_dictionaries, json_file_object, indent=2, sort_keys=True)
+    elif update_type == 'ideal':
+        ideal_distance_traveled = combined_dictionaries.get('ideal_distance_traveled')
+        ideal_distance_traveled.update(dictionary)
+        lifetime_distance_traveled = combined_dictionaries.get('lifetime_distance_traveled')
+        tool_wear_dictionary = combined_dictionaries.get('tool_wear')
+        combined_dictionaries = {'lifetime_distance_traveled': lifetime_distance_traveled, 'ideal_distance_traveled': ideal_distance_traveled, 'tool_wear': tool_wear_dictionary}
+        with open('ToolDistanceDB.json', 'w') as json_file_object:
+            json.dump(combined_dictionaries, json_file_object, indent=2, sort_keys=True)
+    elif update_type == 'tool wear':
+        tool_wear_dictionary = combined_dictionaries.get('tool_wear')
+        tool_wear_dictionary.update(dictionary)
+        lifetime_distance_traveled = combined_dictionaries.get('lifetime_distance_traveled')
+        ideal_distance_traveled = combined_dictionaries.get('ideal_distance_traveled')
+        combined_dictionaries = {'lifetime_distance_traveled': lifetime_distance_traveled, 'ideal_distance_traveled': ideal_distance_traveled, 'tool_wear': tool_wear_dictionary}
+        with open('ToolDistanceDB.json', 'w') as json_file_object:
+            json.dump(combined_dictionaries, json_file_object, indent=2, sort_keys=True)
 
 """
-The message box for clearing a tool's executed distance traveled for an individual tool when the operator changed the tool.
+Defines the function for handling the ToolDistanceDB file. My plan for this function is to create a ToolDistanceDB.estone file for referencing lifetime_distance_traveled, and
+ideal_distance_traveled. It should also create a window to show the user what the calculated executed_distance_traveled is, according to the distance calculation they ran on
+the selected raw data file. It should also append the dictionary of lifetime_distance_traveled. We will have to figure out how to overwrite the existing
+lifetime_distance_traveled dictionary without using the 'w' method, because this file will also store the dictionary for ideal distance traveled. In this blocks current state,
+it will delete all of the contents of ToolDistanceDB.py, and then write ONLY the lifetime_distance_traveled dictionary to it.
+"""
+def lifetime_distance_traveled_calculation(executed_distance_traveled):
+    combined_dictionaries = create_combined_dictionaries()
+    lifetime_distance_traveled = combined_dictionaries.get('lifetime_distance_traveled')
+    for tool in executed_distance_traveled:
+        if tool not in lifetime_distance_traveled.keys():
+            lifetime_distance_traveled.setdefault(tool, executed_distance_traveled.get(tool))
+        else:
+            tool_distance_from_raw_data = executed_distance_traveled.get(tool)
+            tool_distance_from_database = lifetime_distance_traveled.get(tool)
+            new_incremented_tool_distance = tool_distance_from_raw_data + tool_distance_from_database
+            temporary_iterable_dictionary = {tool:new_incremented_tool_distance}
+            lifetime_distance_traveled.update(temporary_iterable_dictionary)
+    tool_wear_calculation(lifetime_distance_traveled)
+    acknowledge_window_for_running_importdata_script(executed_distance_traveled, lifetime_distance_traveled)
+
+"""
+Defines the function that calculates tool_wear as a ratio between lifetime_distance_traveled and ideal_distance_traveled
+"""
+def tool_wear_calculation(dictionary):
+    combined_dictionaries = create_combined_dictionaries()
+    ideal_distance_traveled = combined_dictionaries.get('ideal_distance_traveled')
+    tool_wear_dictionary = combined_dictionaries.get('tool_wear')
+    update_type = 'tool wear'
+    for tool in dictionary:
+        tool_wear_ratio = dictionary.get(tool) / ideal_distance_traveled.get(tool)
+        temporary_iterable_dictionary = {tool:tool_wear_ratio}
+        tool_wear_dictionary.update(temporary_iterable_dictionary)
+    update_database(tool_wear_dictionary, update_type)
+    return tool_wear_dictionary
+
+"""
+The message box for clearing a tool's lifetime distance traveled for an individual tool when the operator changed the tool.
 """
 def executed_tool_change(choose_tool):
     if choose_tool.get() == 'Select tool...':
@@ -36,56 +141,81 @@ def executed_tool_change(choose_tool):
     else:
         response = messagebox.askokcancel("Executed Tool Change", "Was " + str(choose_tool.get()) + " replaced with new parts?")
         if response == 1:
-            messagebox.showinfo("Executed Tool Change", str(choose_tool.get()) + "\'s Executed Distance Traveled was updated to 0.0 ft.")
+            messagebox.showinfo("Executed Tool Change", str(choose_tool.get()) + "\'s Lifetime Distance Traveled was updated to 0.0 ft.")
+            combined_dictionaries = create_combined_dictionaries()
+            lifetime_distance_traveled = combined_dictionaries.get('lifetime_distance_traveled')
+            temporary_iterable_dictionary = {choose_tool.get():0.0}
+            lifetime_distance_traveled.update(temporary_iterable_dictionary)
+            update_type = 'lifetime'
+            update_database(lifetime_distance_traveled, update_type)
+            tool_wear_calculation(lifetime_distance_traveled)
         else:
             pass
+
 """
-The message box for updating executed distance traveled based on a program that was executed.
+The message box for calculating executed_distance_traveled and updating lifetime distance traveled based on a program that was executed when the operator clicks the "Calculate
+Executed Distance Traveled button".
 """
-def update_executed_distance_traveled(raw_data_file):
-    response = messagebox.askokcancel("Update Executed Distance Traveled", "Are you sure you want to update the Execute Distance Traveled according to the program currently being cut on the m600f?")
+def calculate_executed_distance_traveled(raw_data_filepath):
+    response = messagebox.askokcancel("Calculate Lifetime Distance Traveled", "Are you sure you want to update the Lifetime Distance Traveled according to the program currently being cut on the m600f?")
     if response == 1:
-        perform_executed_distance_traveled_calculation(raw_data_file)
-
+        try:
+            raw_data_file = open(raw_data_filepath)
+            raw_data_file.close()
+            executed_distance_traveled = (datacleaning(raw_data_filepath))
+            lifetime_distance_traveled_calculation(executed_distance_traveled)
+        except Exception as e:
+            messagebox.showerror('Calculate Executed Distance Traveled', 'Invalid or no file selected to use for calculation!')
+            print(e)
 
 """
-The message box for updating lifetime distance traveled for an individual tool.
+The message box for updating ideal distance traveled for an individual tool.
 """
-def update_lifetime_distance_traveled(choose_tool):
+def update_ideal_distance_traveled(choose_tool):
     if choose_tool.get() == "Select tool...":
-        messagebox.showerror('Update Lifetime Distance Traveled', "No tool selected!")
+        messagebox.showerror('Update Ideal Distance Traveled', "No tool selected!")
     else:
-        response = messagebox.askokcancel('Update Lifetime Distance Traveled', "Are you sure you want to update the Lifetime Distance Traveled for tool " + str(choose_tool.get()) + ' ?')
-        lifetime_distance_traveled_manager(response, choose_tool)
+        response = messagebox.askokcancel('Update Ideal Distance Traveled', "Are you sure you want to update the Ideal Distance Traveled for tool " + str(choose_tool.get()) + ' ?')
+        ideal_distance_traveled_manager(response, choose_tool)
 
 """
-Opens a new window if the user wishes to update the lifetime distance traveled for an individual tool.
+Opens a new window if the user wishes to update the Ideal distance traveled for an individual tool.
 """
-def lifetime_distance_traveled_manager(response, choose_tool):
+def ideal_distance_traveled_manager(response, choose_tool):
     if response == 1:
-        lifetime_distance_traveled_manager_window = Toplevel(root)
-        lifetime_distance_traveled_manager_window.title('Update Lifetime Distance Traveled for tool ' + str(choose_tool.get()))
-        info_label = Label(lifetime_distance_traveled_manager_window, text="Enter New Lifetime Distance Traveled for tool " + str(choose_tool.get()) + " in feet (ft)", bd=3, anchor=CENTER)
+        ideal_distance_traveled_manager_window = Toplevel(root)
+        ideal_distance_traveled_manager_window.title('Update Ideal Distance Traveled for tool ' + str(choose_tool.get()))
+        info_label = Label(ideal_distance_traveled_manager_window, text="Enter New Ideal Distance Traveled for tool " + str(choose_tool.get()) + " in feet (ft)", bd=3, anchor=CENTER)
         info_label.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky=W+E)
-        new_lifetime_distance_traveled_entry_field = Entry(lifetime_distance_traveled_manager_window, width=50, relief=SUNKEN, bd=3)
-        new_lifetime_distance_traveled_entry_field.grid(row=1, column=0, columnspan=5, padx=10, pady=10, sticky=W+E)
-        close_button = Button(lifetime_distance_traveled_manager_window, text='Cancel', command=lifetime_distance_traveled_manager_window.destroy)
-        update_button = Button(lifetime_distance_traveled_manager_window, text='Update', command=lambda: change_lifetime_distance_traveled(new_lifetime_distance_traveled_entry_field, choose_tool, response, lifetime_distance_traveled_manager_window))
-        close_button.grid(row=2, column=1, padx=5, pady=5)
+        new_ideal_distance_traveled_entry_field = Entry(ideal_distance_traveled_manager_window, width=50, relief=SUNKEN, bd=3)
+        new_ideal_distance_traveled_entry_field.grid(row=1, column=0, columnspan=5, padx=10, pady=10, sticky=W+E)
+        close_button = Button(ideal_distance_traveled_manager_window, text='Cancel', command=ideal_distance_traveled_manager_window.destroy)
+        update_button = Button(ideal_distance_traveled_manager_window, text='Update', command=lambda: change_ideal_distance_traveled(new_ideal_distance_traveled_entry_field, choose_tool, response, ideal_distance_traveled_manager_window))
+        close_button.grid(row=2, column=0, padx=5, pady=5)
         update_button.grid(row=2, column=4, padx=5, pady=5)
+
 """
-Performs the change of the dictionary of lifetime_distance_traveled.
+Performs the change of the dictionary of ideal_distance_traveled.
 """
-def change_lifetime_distance_traveled(new_lifetime_distance_traveled_entry_field, choose_tool, response, lifetime_distance_traveled_manager_window):
-    compare_data_type_of_new_lifetime_distance_traveled_entry_field = StringVar()
-    compare_data_type_of_new_lifetime_distance_traveled_entry_field.set(new_lifetime_distance_traveled_entry_field.get())
+def change_ideal_distance_traveled(new_ideal_distance_traveled_entry_field, choose_tool, response, ideal_distance_traveled_manager_window):
+    combined_dictionaries = create_combined_dictionaries()
+    lifetime_distance_traveled = combined_dictionaries.get('lifetime_distance_traveled')
+    ideal_distance_traveled = combined_dictionaries.get('ideal_distance_traveled')
+    compare_data_type_of_new_ideal_distance_traveled_entry_field = StringVar()
+    compare_data_type_of_new_ideal_distance_traveled_entry_field.set(new_ideal_distance_traveled_entry_field.get())
     try:
-        print(int(compare_data_type_of_new_lifetime_distance_traveled_entry_field.get()) + 10)
-        lifetime_distance_traveled_manager_window.destroy()
+        new_ideal_distance_traveled_for_selected_tool = float(compare_data_type_of_new_ideal_distance_traveled_entry_field.get())
+        temporary_iterable_dictionary = {choose_tool.get():new_ideal_distance_traveled_for_selected_tool}
+        ideal_distance_traveled.update(temporary_iterable_dictionary)
+        update_type = 'ideal'
+        update_database(ideal_distance_traveled, update_type)
+        tool_wear_calculation(lifetime_distance_traveled)
+        ideal_distance_traveled_manager_window.destroy()
     except Exception as e:
-        messagebox.showerror('Update Lifetime Distance Traveled', "The entry " + str(new_lifetime_distance_traveled_entry_field.get()) + " is not a valid input!")
-        lifetime_distance_traveled_manager_window.destroy()
+        messagebox.showerror('Update Ideal Distance Traveled', "The entry " + str(new_ideal_distance_traveled_entry_field.get()) + " is not a valid input!")
+        ideal_distance_traveled_manager_window.destroy()
         print(e)
+
 """
 The place where the user picks the raw data to use for calculating executed_distance_traveled. This function also updates the label label_for_the_selected_raw_data_file_directory with the file directory that was selected.
 """
@@ -100,8 +230,78 @@ def open_raw_data_file(label_for_the_selected_raw_data_file_directory):
 """
 The dropdown menu for selecting tools. This will be used for any operations regarding indivdual tools.
 """
-def choose_tool_dropdown_menu():
-    return
+def choose_tool_dropdown_menu(choose_tool):
+    print(choose_tool)
+    tool_info_label = Label(tool_wear_manager_display_frame)
+    if choose_tool == 'Select tool...':
+        print('Select tool')
+        tool_info_label.destroy()
+        tool_info_label = Label(tool_wear_manager_display_frame, text='There is no tool selected yet!', padx=10, pady=10)
+        tool_info_label.pack()
+    else:
+        print(choose_tool)
+        tool_info_label.destroy()
+        tool_info_label = Label(tool_wear_manager_display_frame, text=choose_tool, padx=10, pady=10)
+        tool_info_label.pack()
+
+"""
+The 'acknowledge_window' function is the operator's visual queue of the output taken from ImportData.py. It includes that output, the current distance in the database, and the distance
+that will be entered into the database if the operator clicks 'acknowledge'. The 'update_destroy' function simply calls the update_database function and destroys the acknowledge window.
+This function exists simply so that the 'update_database' function will never need more than two positional arguements.
+"""
+def acknowledge_window_for_running_importdata_script(executed_distance_traveled, lifetime_distance_traveled):
+    combined_dictionaries = create_combined_dictionaries()
+    acknowledgement_window_for_running_importdata_script = Toplevel(root)
+    acknowledgement_window_for_running_importdata_script.title('Estone CNC Tool Wear Manager')
+    database_lifetime_distance_traveled = combined_dictionaries.get('lifetime_distance_traveled')
+    database_lifetime_distance_traveled_frame = LabelFrame(acknowledgement_window_for_running_importdata_script, text='Distance from Database', padx=10, pady=10, bd=5)
+    database_lifetime_distance_traveled_frame.grid(row=0, column=1)
+    updated_lifetime_distance_traveled = lifetime_distance_traveled
+    updated_lifetime_distance_traveled_frame = LabelFrame(acknowledgement_window_for_running_importdata_script, text='New Distance after Update, and Tool Wear.', padx=10, pady=10, bd=5)
+    updated_lifetime_distance_traveled_frame.grid(row=0, column=2)
+    executed_distance_traveled_frame = LabelFrame(acknowledgement_window_for_running_importdata_script, text='Executed Distance from Raw Data', padx=10, pady=10, bd=5)
+    executed_distance_traveled_frame.grid(row=0, column=0)
+    tool_wear_dictionary = combined_dictionaries.get('tool_wear')
+    row_number = {}
+    xiter = 0
+    update_type = 'lifetime'
+    for tool in updated_lifetime_distance_traveled:
+        xiter += 1
+        temporary_iterable_dictionary = {tool:xiter}
+        row_number.update(temporary_iterable_dictionary)
+    for tool in executed_distance_traveled:
+        string = str(executed_distance_traveled.get(tool))
+        truncated_string = string[:string.find('.') + 3]
+        label = Label(executed_distance_traveled_frame, text=str(tool) + ' : ' + truncated_string + ' ft.', padx=2, pady=2, bd=1, anchor=CENTER, height=2, width=30)
+        label.grid(row=row_number.get(tool), column=0)
+    if len(database_lifetime_distance_traveled) == 0:
+        for tool in updated_lifetime_distance_traveled:
+            label = Label(database_lifetime_distance_traveled_frame, text=str(tool) + ' : ' + '0.00 ft.', padx=2, pady=2, bd=1, anchor=CENTER, height=2, width=30)
+            label.grid(row=row_number.get(tool), column=1)
+    elif len(database_lifetime_distance_traveled) >= 1:
+        for tool in database_lifetime_distance_traveled:
+            string = str(database_lifetime_distance_traveled.get(tool))
+            truncated_string = string[:string.find('.') + 3]
+            label = Label(database_lifetime_distance_traveled_frame, text=str(tool) + ' : ' + truncated_string + ' ft.', padx=2, pady=2, bd=1, anchor=CENTER, height=2, width=30)
+            label.grid(row=row_number.get(tool), column=1)
+    for tool in updated_lifetime_distance_traveled:
+        string = str(updated_lifetime_distance_traveled.get(tool))
+        truncated_string = string[:string.find('.') + 3]
+        percentage = tool_wear_dictionary.get(tool) * 100
+        string2 = str(percentage)
+        truncated_string2 = str(string2[:3])
+        label = Label(updated_lifetime_distance_traveled_frame, text=str(tool) + ' : ' + truncated_string + ' ft. : ' + truncated_string2 + ' %', padx=2, pady=2, bd=1, anchor=CENTER, height=2, width=60)
+        label.grid(row=row_number.get(tool), column=2)
+    final_row_number = len(row_number) + 1
+    cancel_button = Button(acknowledgement_window_for_running_importdata_script, text='Cancel', padx=5, pady=5, bd=2, command=acknowledgement_window_for_running_importdata_script.destroy)
+    cancel_button.grid(column=0, row=final_row_number)
+    acknowledge_button = Button(acknowledgement_window_for_running_importdata_script, text='Acknowledge', padx=5, pady=5, bd=2, command=lambda: update_and_destroy(updated_lifetime_distance_traveled, update_type, acknowledgement_window_for_running_importdata_script))
+    acknowledge_button.grid(column=2, row=final_row_number)
+    acknowledgement_window_for_running_importdata_script.mainloop()
+
+def update_and_destroy(updated_lifetime_distance_traveled, update_type, acknowledgement_window_for_running_importdata_script):
+    acknowledgement_window_for_running_importdata_script.destroy()
+    update_database(updated_lifetime_distance_traveled, update_type)
 
 """
 Defines the major window that the program will run in.
@@ -150,31 +350,28 @@ tool_wear_manager_frame = LabelFrame(root, text="Tool Wear Manager", padx=5, pad
 tool_wear_manager_frame.grid(row=0, column=1, rowspan=2, sticky=N+S+E+W)
 tool_wear_manager_frame.columnconfigure(0, weight=1, pad=10)
 tool_wear_manager_frame.rowconfigure(0, weight=1, pad=10)
-"""
-Trying to fit a new frame inside of the tool_wear_manager frame. Getting some grid manager errors when doing it. Got the new frame commented out for now.
-"""
-# tool_wear_manager_display_frame = LabelFrame(tool_wear_manager_frame, padx=5, pady=5)
-# tool_wear_manager_display_frame.grid(row=1, column=0, sticky=N+S+E+W)
-# tool_wear_manager_display_frame.columnconfigure(0, weight=1, pad=10)
-# tool_wear_manager_display_frame.rowconfigure(0, weight=1, pad=10)
+tool_wear_manager_display_frame = LabelFrame(tool_wear_manager_frame, padx=5, pady=5)
+tool_wear_manager_display_frame.grid(row=0, column=0, columnspan=3, sticky=N+S+E+W)
+tool_wear_manager_display_frame.columnconfigure(0, weight=1, pad=10)
+tool_wear_manager_display_frame.rowconfigure(0, weight=1, pad=10)
 
 """
 Defines and inserts the button to clear the executed_distance_traveled when the operator changes the selected tool in the tool selection drop down menu.
 """
-button_that_clears_executed_distance_traveled = Button(tool_wear_manager_frame, text="Executed Tool Change", command=lambda: executed_tool_change(choose_tool), padx=5, pady=5)
-button_that_clears_executed_distance_traveled.pack()
+button_that_clears_lifetime_distance_traveled = Button(tool_wear_manager_frame, text="Executed Tool Change", command=lambda: executed_tool_change(choose_tool), padx=5, pady=5)
+button_that_clears_lifetime_distance_traveled.grid(row=1, column=1, padx=5, pady=5)
 
 """
 Defines the button that actually calculates the executed_distance_traveled for a given file chosen in the import_data file dialogue box.
 """
-button_that_updates_executed_distance_traveled = Button(calculate_executed_distance_traveled_frame, text="Calculate Executed Distance Traveled", command=lambda: update_executed_distance_traveled(raw_data_filepath), padx=5, pady=5)
-button_that_updates_executed_distance_traveled.pack()
+button_that_calculates_executed_distance_traveled = Button(calculate_executed_distance_traveled_frame, text="Calculate Executed Distance Traveled", command=lambda: calculate_executed_distance_traveled(raw_data_filepath), padx=5, pady=5)
+button_that_calculates_executed_distance_traveled.pack()
 
 """
 Defines the button that will allow the operator to set a new Lifetime Distance Traveled for an individual tool.
 """
-button_that_updates_lifetime_distance_traveled = Button(tool_wear_manager_frame, text='Update Lifetime Distance Traveled', command=lambda: update_lifetime_distance_traveled(choose_tool), padx=5, pady=5)
-button_that_updates_lifetime_distance_traveled.pack()
+button_that_updates_ideal_distance_traveled = Button(tool_wear_manager_frame, text='Update Ideal Distance Traveled', command=lambda: update_ideal_distance_traveled(choose_tool), padx=5, pady=5)
+button_that_updates_ideal_distance_traveled.grid(row=1, column=2, padx=5, pady=5)
 
 """
 Allows the operator to select the raw data file that will be used for calculating executed distance traveled. Also provides a label to show the operator what the filepath
@@ -189,8 +386,11 @@ label_for_the_selected_raw_data_file_directory.grid(row=0, column=1)
 Defines the tool selection drop down menu.
 """
 # tool_selection_list = executed_distance_traveled.keys()  #Insert this into the text portion of the tool_selection OptionMenu.
-tool_selection = OptionMenu(tool_wear_manager_frame, choose_tool, 'E001', 'E002', 'E003', 'E004', 'E005', 'E006', 'E007', 'E008', 'E009', 'E010', 'E011', 'E012', 'E013', 'E014', 'E015', 'E016', 'E017', 'E018')
-tool_selection.pack()
+# tool_selection = OptionMenu(tool_wear_manager_frame, choose_tool_dropdown_menu(), 'E001', 'E002', 'E003', 'E004', 'E005', 'E006', 'E007', 'E008', 'E009', 'E010', 'E011', 'E012', 'E013', 'E014', 'E015', 'E016', 'E017', 'E018')
+tool_info_label = Label(tool_wear_manager_display_frame)
+tool_selection = OptionMenu(tool_wear_manager_frame, choose_tool, 'E001', 'E002', 'E003', 'E004', 'E005', 'E006', 'E007', 'E008', 'E009', 'E010', 'E011', 'E012', 'E013', 'E014', 'E015', 'E016', 'E017', 'E018', command=choose_tool_dropdown_menu)
+tool_selection.grid(row=1, column=0, padx=5, pady=5)
+
 
 
 
