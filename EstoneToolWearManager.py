@@ -228,23 +228,6 @@ def open_raw_data_file(label_for_the_selected_raw_data_file_directory):
     label_for_the_selected_raw_data_file_directory.grid(row=0, column=1)
 
 """
-The dropdown menu for selecting tools. This will be used for any operations regarding indivdual tools.
-"""
-def choose_tool_dropdown_menu(choose_tool):
-    print(choose_tool)
-    tool_info_label = Label(tool_wear_manager_display_frame)
-    if choose_tool == 'Select tool...':
-        print('Select tool')
-        tool_info_label.destroy()
-        tool_info_label = Label(tool_wear_manager_display_frame, text='There is no tool selected yet!', padx=10, pady=10)
-        tool_info_label.pack()
-    else:
-        print(choose_tool)
-        tool_info_label.destroy()
-        tool_info_label = Label(tool_wear_manager_display_frame, text=choose_tool, padx=10, pady=10)
-        tool_info_label.pack()
-
-"""
 The 'acknowledge_window' function is the operator's visual queue of the output taken from ImportData.py. It includes that output, the current distance in the database, and the distance
 that will be entered into the database if the operator clicks 'acknowledge'. The 'update_destroy' function simply calls the update_database function and destroys the acknowledge window.
 This function exists simply so that the 'update_database' function will never need more than two positional arguements.
@@ -290,7 +273,7 @@ def acknowledge_window_for_running_importdata_script(executed_distance_traveled,
         percentage = tool_wear_dictionary.get(tool) * 100
         string2 = str(percentage)
         truncated_string2 = str(string2[:3])
-        label = Label(updated_lifetime_distance_traveled_frame, text=str(tool) + ' : ' + truncated_string + ' ft. : ' + truncated_string2 + ' %', padx=2, pady=2, bd=1, anchor=CENTER, height=2, width=60)
+        label = Label(updated_lifetime_distance_traveled_frame, text=str(tool) + ' : ' + truncated_string + ' ft. : ' + truncated_string2 + ' %', padx=2, pady=2, bd=1, anchor=CENTER, height=2, width=40)
         label.grid(row=row_number.get(tool), column=2)
     final_row_number = len(row_number) + 1
     cancel_button = Button(acknowledgement_window_for_running_importdata_script, text='Cancel', padx=5, pady=5, bd=2, command=acknowledgement_window_for_running_importdata_script.destroy)
@@ -302,6 +285,50 @@ def acknowledge_window_for_running_importdata_script(executed_distance_traveled,
 def update_and_destroy(updated_lifetime_distance_traveled, update_type, acknowledgement_window_for_running_importdata_script):
     acknowledgement_window_for_running_importdata_script.destroy()
     update_database(updated_lifetime_distance_traveled, update_type)
+
+"""
+'choose_tool_dropdown_menu' and 'create_text_for_label' are the two functions that populate the labels shown in the tool_wear_manager_display_frame. The purpose of the
+'choose_tool_dropdown_menu' function is to define the labels, and place them on the screen. 'choose_tool_dropdown_menu' is only called when the operator selects a choice in the OptionMenu
+'select_tool'. The 'create_text_for_label' function defines the text that will be populated in each label. Currently, do to the restraints with tkinter's label widgets, loops, or a mix of
+both of those factors and a lack of knowledge on my part, the labels are simply laid on top of one another. There could be an instance when an operator populates too many of these widgets
+and the program could crash, but because of how often the program updates the database, it shouldn't be too big of an issue if this ever does happen.
+"""
+def choose_tool_dropdown_menu(choose_tool):
+    label_text = create_text_for_label(choose_tool)
+    tool_info_label_tool = Label(tool_wear_manager_display_frame, text=choose_tool, padx=5, pady=5, anchor=CENTER)
+    tool_info_label_lifetime_distance = Label(tool_wear_manager_display_frame, text=label_text[0], padx=5, pady=5, anchor=CENTER, width=30)
+    tool_info_label_ideal_distance = Label(tool_wear_manager_display_frame, text=label_text[1], padx=5, pady=5, anchor=CENTER, width=30)
+    tool_info_label_tool_wear = Label(tool_wear_manager_display_frame, text=label_text[2], padx=5, pady=5, anchor=CENTER, width=30)
+    tool_info_label_tool.grid(row=0, column=0, columnspan=3, ipady=2)
+    tool_info_label_lifetime_distance.grid(row=1, column=0, padx=5, pady=2, ipadx=10, ipady=2)
+    tool_info_label_ideal_distance.grid(row=1, column=1, padx=5, pady=2, ipadx=10, ipady=2)
+    tool_info_label_tool_wear.grid(row=1, column=2, padx=5, pady=2, ipadx=10, ipady=2)
+
+def create_text_for_label(choose_tool):
+    label_text = []
+    combined_dictionaries = create_combined_dictionaries()
+    lifetime_distance_traveled = combined_dictionaries.get('lifetime_distance_traveled')
+    ideal_distance_traveled = combined_dictionaries.get('ideal_distance_traveled')
+    tool_wear_dictionary = combined_dictionaries.get('tool_wear')
+    if choose_tool not in lifetime_distance_traveled.keys():
+        label_text.append(' ')
+    else:
+        lifetime_distance_for_tool = str(lifetime_distance_traveled.get(choose_tool)) + ' ft.'
+        lifetime_distance_for_tool_truncated = lifetime_distance_for_tool[:lifetime_distance_for_tool.find('.') + 3]
+        label_text.append('Lifetime Distance Traveled for ' + choose_tool + ' : ' + lifetime_distance_for_tool_truncated)
+    if choose_tool not in ideal_distance_traveled.keys():
+        label_text.append(' ')
+    else:
+        ideal_distance_for_tool = str(ideal_distance_traveled.get(choose_tool)) + ' ft.'
+        label_text.append('Ideal Distance Traveled for ' + choose_tool + ' : ' + ideal_distance_for_tool)
+    if choose_tool not in tool_wear_dictionary.keys():
+        label_text.append(' ')
+    else:
+        tool_wear_percentage = tool_wear_dictionary.get(choose_tool) * 100
+        tool_wear_percentage_string = str(tool_wear_percentage)
+        tool_wear_percentage_truncated_string = tool_wear_percentage_string[:3]  + ' %'
+        label_text.append('Tool Wear percentage for' + choose_tool + ' : ' + tool_wear_percentage_truncated_string)
+    return label_text
 
 """
 Defines the major window that the program will run in.
@@ -385,15 +412,8 @@ label_for_the_selected_raw_data_file_directory.grid(row=0, column=1)
 """
 Defines the tool selection drop down menu.
 """
-# tool_selection_list = executed_distance_traveled.keys()  #Insert this into the text portion of the tool_selection OptionMenu.
-# tool_selection = OptionMenu(tool_wear_manager_frame, choose_tool_dropdown_menu(), 'E001', 'E002', 'E003', 'E004', 'E005', 'E006', 'E007', 'E008', 'E009', 'E010', 'E011', 'E012', 'E013', 'E014', 'E015', 'E016', 'E017', 'E018')
-tool_info_label = Label(tool_wear_manager_display_frame)
 tool_selection = OptionMenu(tool_wear_manager_frame, choose_tool, 'E001', 'E002', 'E003', 'E004', 'E005', 'E006', 'E007', 'E008', 'E009', 'E010', 'E011', 'E012', 'E013', 'E014', 'E015', 'E016', 'E017', 'E018', command=choose_tool_dropdown_menu)
-tool_selection.grid(row=1, column=0, padx=5, pady=5)
-
-
-
-
+tool_selection.grid(row=1, column=0, padx=5, pady=5, ipady=3, ipadx=20, sticky=N+S+E+W)
 
 """
 The function that loops the program until an operator exits the program.
