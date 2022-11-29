@@ -149,6 +149,7 @@ def executed_tool_change(choose_tool):
             update_type = 'lifetime'
             update_database(lifetime_distance_traveled, update_type)
             tool_wear_calculation(lifetime_distance_traveled)
+            choose_tool_dropdown_menu(choose_tool)
         else:
             pass
 
@@ -210,6 +211,7 @@ def change_ideal_distance_traveled(new_ideal_distance_traveled_entry_field, choo
         update_type = 'ideal'
         update_database(ideal_distance_traveled, update_type)
         tool_wear_calculation(lifetime_distance_traveled)
+        choose_tool_dropdown_menu(choose_tool)
         ideal_distance_traveled_manager_window.destroy()
     except Exception as e:
         messagebox.showerror('Update Ideal Distance Traveled', "The entry " + str(new_ideal_distance_traveled_entry_field.get()) + " is not a valid input!")
@@ -291,44 +293,72 @@ def update_and_destroy(updated_lifetime_distance_traveled, update_type, acknowle
 'choose_tool_dropdown_menu' function is to define the labels, and place them on the screen. 'choose_tool_dropdown_menu' is only called when the operator selects a choice in the OptionMenu
 'select_tool'. The 'create_text_for_label' function defines the text that will be populated in each label. Currently, do to the restraints with tkinter's label widgets, loops, or a mix of
 both of those factors and a lack of knowledge on my part, the labels are simply laid on top of one another. There could be an instance when an operator populates too many of these widgets
-and the program could crash, but because of how often the program updates the database, it shouldn't be too big of an issue if this ever does happen.
+and the program could crash, but because of how often the program updates the database, it shouldn't be too big of an issue if this ever does happen. Unfortunately, because functions in
+this GUI are either vanilla python functions or tkinter "Callbacks," the data type of 'choose_tool' changes between a 'str' clas and a 'tkinter.string'. When 'choose_tool' is a
+'tkinter.string' class object, it must be fetched with the .get() method, which is not applicable to the python 'str' class. Thus, an if statement is called to check the data type of
+'choose_tool,' and points the function to handle the string manipulation and concatonation accordingly.
 """
 def choose_tool_dropdown_menu(choose_tool):
     label_text = create_text_for_label(choose_tool)
-    tool_info_label_tool = Label(tool_wear_manager_display_frame, text=choose_tool, padx=5, pady=5, anchor=CENTER)
-    tool_info_label_lifetime_distance = Label(tool_wear_manager_display_frame, text=label_text[0], padx=5, pady=5, anchor=CENTER, width=30)
-    tool_info_label_ideal_distance = Label(tool_wear_manager_display_frame, text=label_text[1], padx=5, pady=5, anchor=CENTER, width=30)
-    tool_info_label_tool_wear = Label(tool_wear_manager_display_frame, text=label_text[2], padx=5, pady=5, anchor=CENTER, width=30)
+    tool_info_label_tool = Label(tool_wear_manager_display_frame, text=label_text[0], padx=5, pady=5, anchor=CENTER)
+    tool_info_label_lifetime_distance = Label(tool_wear_manager_display_frame, text=label_text[1], padx=5, pady=5, anchor=CENTER, width=30)
+    tool_info_label_ideal_distance = Label(tool_wear_manager_display_frame, text=label_text[2], padx=5, pady=5, anchor=CENTER, width=30)
+    tool_info_label_tool_wear = Label(tool_wear_manager_display_frame, text=label_text[3], padx=5, pady=5, anchor=CENTER, width=30)
     tool_info_label_tool.grid(row=0, column=0, columnspan=3, ipady=2)
     tool_info_label_lifetime_distance.grid(row=1, column=0, padx=5, pady=2, ipadx=10, ipady=2)
     tool_info_label_ideal_distance.grid(row=1, column=1, padx=5, pady=2, ipadx=10, ipady=2)
     tool_info_label_tool_wear.grid(row=1, column=2, padx=5, pady=2, ipadx=10, ipady=2)
 
 def create_text_for_label(choose_tool):
+    string_comparator = str()
+    tkinter_string_comparator = StringVar()
     label_text = []
     combined_dictionaries = create_combined_dictionaries()
     lifetime_distance_traveled = combined_dictionaries.get('lifetime_distance_traveled')
     ideal_distance_traveled = combined_dictionaries.get('ideal_distance_traveled')
     tool_wear_dictionary = combined_dictionaries.get('tool_wear')
-    if choose_tool not in lifetime_distance_traveled.keys():
-        label_text.append(' ')
+    if type(choose_tool) == type(string_comparator):
+        label_text.append(choose_tool)
+        if choose_tool not in lifetime_distance_traveled.keys():
+            label_text.append(' ')
+        else:
+            lifetime_distance_for_tool = str(lifetime_distance_traveled.get(choose_tool)) + ' ft.'
+            lifetime_distance_for_tool_truncated = lifetime_distance_for_tool[:lifetime_distance_for_tool.find('.') + 3]
+            label_text.append('Lifetime Distance Traveled for ' + choose_tool + ' : ' + lifetime_distance_for_tool_truncated)
+        if choose_tool not in ideal_distance_traveled.keys():
+            label_text.append(' ')
+        else:
+            ideal_distance_for_tool = str(ideal_distance_traveled.get(choose_tool)) + ' ft.'
+            label_text.append('Ideal Distance Traveled for ' + choose_tool + ' : ' + ideal_distance_for_tool)
+        if choose_tool not in tool_wear_dictionary.keys():
+            label_text.append(' ')
+        else:
+            tool_wear_percentage = tool_wear_dictionary.get(choose_tool) * 100
+            tool_wear_percentage_string = str(tool_wear_percentage)
+            tool_wear_percentage_truncated_string = tool_wear_percentage_string[:3]  + ' %'
+            label_text.append('Tool Wear percentage for' + choose_tool + ' : ' + tool_wear_percentage_truncated_string)
+        return label_text
     else:
-        lifetime_distance_for_tool = str(lifetime_distance_traveled.get(choose_tool)) + ' ft.'
-        lifetime_distance_for_tool_truncated = lifetime_distance_for_tool[:lifetime_distance_for_tool.find('.') + 3]
-        label_text.append('Lifetime Distance Traveled for ' + choose_tool + ' : ' + lifetime_distance_for_tool_truncated)
-    if choose_tool not in ideal_distance_traveled.keys():
-        label_text.append(' ')
-    else:
-        ideal_distance_for_tool = str(ideal_distance_traveled.get(choose_tool)) + ' ft.'
-        label_text.append('Ideal Distance Traveled for ' + choose_tool + ' : ' + ideal_distance_for_tool)
-    if choose_tool not in tool_wear_dictionary.keys():
-        label_text.append(' ')
-    else:
-        tool_wear_percentage = tool_wear_dictionary.get(choose_tool) * 100
-        tool_wear_percentage_string = str(tool_wear_percentage)
-        tool_wear_percentage_truncated_string = tool_wear_percentage_string[:3]  + ' %'
-        label_text.append('Tool Wear percentage for' + choose_tool + ' : ' + tool_wear_percentage_truncated_string)
-    return label_text
+        label_text.append(choose_tool.get())
+        if choose_tool.get() not in lifetime_distance_traveled.keys():
+            label_text.append(' ')
+        else:
+            lifetime_distance_for_tool = str(lifetime_distance_traveled.get(choose_tool.get())) + ' ft.'
+            lifetime_distance_for_tool_truncated = lifetime_distance_for_tool[:lifetime_distance_for_tool.find('.') + 3]
+            label_text.append('Lifetime Distance Traveled for ' + choose_tool.get() + ' : ' + lifetime_distance_for_tool_truncated)
+        if choose_tool.get() not in ideal_distance_traveled.keys():
+            label_text.append(' ')
+        else:
+            ideal_distance_for_tool = str(ideal_distance_traveled.get(choose_tool.get())) + ' ft.'
+            label_text.append('Ideal Distance Traveled for ' + choose_tool.get() + ' : ' + ideal_distance_for_tool)
+        if choose_tool.get() not in tool_wear_dictionary.keys():
+            label_text.append(' ')
+        else:
+            tool_wear_percentage = tool_wear_dictionary.get(choose_tool.get()) * 100
+            tool_wear_percentage_string = str(tool_wear_percentage)
+            tool_wear_percentage_truncated_string = tool_wear_percentage_string[:3]  + ' %'
+            label_text.append('Tool Wear percentage for' + choose_tool.get() + ' : ' + tool_wear_percentage_truncated_string)
+        return label_text
 
 """
 Defines the major window that the program will run in.
