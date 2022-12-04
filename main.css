@@ -1,0 +1,94 @@
+#margin {
+
+}
+
+#main {
+  background-color: #454545;
+}
+
+#title {
+  background-color: #00ff99;
+  font-style: italic;
+  font-family: Arial;
+  font-stretch: ultra-expanded;
+  font-size: 72px;
+  font-weight: bold;
+  text-align: center;
+  color: #000000;
+  padding: 0px 7px;
+  border-radius: 25px;
+  margin-top: 2px;
+}
+
+#body {
+margin: 0px;
+}
+
+#refresh {
+  background-color: #333333;
+  font-style: italic;
+  font-family: Arial;
+  font-size: 20px;
+  font-weight: bold;
+  color: #00ff99;
+  text-transform: lowercase;
+  margin: 5px;
+  width: 1in;
+  border-radius: 25px;
+  border-width: 0px
+}
+
+#TheHead {
+  display: flex;
+  align-items: center;
+}
+
+#testdiv {
+  background-color: #333333;
+  color: #00ff99;
+  font-style: italic;
+  font-family: Arial;
+  font-size: 20px;
+  font-weight: bold;
+  color: #00ff99;
+  text-transform: lowercase;
+  margin: 5px;
+  padding: 0px 5px;
+  border-radius: 25px;
+  border-width: 2px;
+  border-color: #ffffff;
+}
+
+#testarea {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#testbutton {
+  background-color: #333333;
+  font-style: italic;
+  font-family: Arial;
+  font-size: 20px;
+  font-weight: bold;
+  color: #00ff99;
+  text-transform: lowercase;
+  margin: 5px;
+  border-radius: 25px;
+  border-width: 0px;
+}
+
+#tictactoeboard {
+  display: grid;
+}
+
+#tictactoerow {
+  
+}
+
+#tictactoecell {
+  width: 40px;
+  height: 40px;
+  background-color: #333333;
+  margin: 20px;
+}
