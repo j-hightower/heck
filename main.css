@@ -80,15 +80,43 @@ margin: 0px;
 
 #tictactoeboard {
   display: grid;
+  margin: 25px;
 }
 
 #tictactoerow {
-  
+  display: grid;
+  grid-auto-flow: column;
+  margin: 0px;
 }
 
-#tictactoecell {
-  width: 40px;
-  height: 40px;
+.tictactoecell {
+  width: 100px;
+  height: 100px;
   background-color: #333333;
-  margin: 20px;
+  margin: 5px;
+  border-width: 0px;
+  border-radius: 25px;
+  font-size: 72px;
+  font-family: Arial;
+  font-weight: bold;
+}
+
+#tictactoeplayed {
+  width: 100%;
+  height: 100%;
+}
+
+#tictactoereset {
+  display: grid;
+  grid-auto-flow: column;
+  margin: 25px 0px;
+  width: 2in;
+  border-width: 0px;
+  border-radius: 25px;
+  background-color: #00ff99;
+  color: #000000;
+  font-family: Arial;
+  font-style: italic;
+  font-size: 60px;
+  padding: 8px, 4px;
 }
